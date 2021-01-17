@@ -1,0 +1,6 @@
+QR decomposition: https://en.wikipedia.org/wiki/QR_decomposition
+Orthogonal matrix: https://en.wikipedia.org/wiki/Orthogonal_matrix
+
+Least squares approximation: 
+https://www.youtube.com/watch?v=MC7l96tW8V8 (Khan Academy)
+https://www.youtube.com/watch?v=YwZYSTQs-Hk (MIT OpenCourseWare)

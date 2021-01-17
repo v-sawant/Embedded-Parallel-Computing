@@ -1,0 +1,274 @@
+/*
+ * HOST side program
+ */
+ 
+/* Epiphany Host Application */
+
+#include <stdio.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <time.h>
+#include <math.h>
+
+#include <e-loader.h>  // Comment this line if you are using old SDK ver 5.13.09.10
+
+#include "e-hal.h"
+
+#define FAIL(...) { fprintf(stderr, __VA_ARGS__); exit(1); }
+#define SHM_OFFSET 0x01000000
+
+#define IN_ROWS 16
+#define IN_COLS 16
+
+#define COREUSED 4//16//8//4//2//1//(unsigned int) IN_ROWS/2
+#define NB_STAGES 11
+#define Double float //double
+
+typedef struct{
+	Double flag;
+	Double stage;
+	Double test;
+	Double H[IN_ROWS][IN_ROWS][IN_COLS];
+	Double Q[IN_ROWS][IN_ROWS];
+	Double R[IN_ROWS][IN_COLS];
+	Double A[IN_ROWS][IN_COLS];
+	unsigned long long total_cycles[COREUSED];
+	unsigned long long stage_cycles[NB_STAGES];
+}shm_t;
+
+Double in[IN_ROWS][IN_COLS] = {
+	{5.124575, 7.898948, 7.946213, 3.592056, 6.081988,7.166724, 7.788865,9.798719,4.258254, 1.054377, 7.652938, 3.552302, 2.828004, 1.762015, 2.638748, 8.069129}, {2.522771,1.012173,8.776333, 6.716550,  4.709401,  1.210326, 1.280568, 3.150382, 9.152067, 2.220713, 4.314055, 2.801475, 0.355802, 4.751442, 2.452192, 8.104572}, {8.535061, 1.283802, 0.308171, 1.881512, 6.372757, 4.749593, 5.185006, 8.183881, 0.145697, 9.572844, 4.968377, 2.484793, 3.972274, 0.722540, 4.236591, 8.985795}, {3.747190, 1.811495, 6.834885, 9.154308, 5.894849, 0.924535, 4.470197, 0.745557, 2.168096, 6.291060, 6.742811, 0.373962, 4.722142, 6.529717, 9.824009, 7.356618}, {6.461459, 9.131959, 7.072122, 0.483971, 1.670396, 8.949241, 4.018287, 3.546607, 8.672633, 0.835284, 1.438314, 5.034810, 6.390177, 3.856355, 2.282590, 2.083286}, {9.260374, 6.927009, 4.018142, 0.385422, 1.099953, 3.724873, 9.097155, 9.176734, 6.069993, 8.241838, 9.264992, 1.061532, 3.459950, 2.737167, 2.078934, 3.678259}, {6.428624, 0.599322, 6.768367, 8.416201, 2.400816, 6.837505, 0.179495, 4.902166, 7.376048, 9.049492, 7.510052, 1.206717, 5.326238, 2.406306, 4.195184, 9.811339}, {8.330168, 8.243491, 5.997973, 8.827311, 5.079985, 6.432596, 3.651846, 9.114349, 1.086232, 7.299483, 4.097865, 8.284714, 0.099244, 9.042177, 1.308067, 3.394185}, {6.530458, 2.984305, 6.574254, 5.616988, 9.094666, 5.588702, 5.533086, 7.406141, 4.161861, 0.238815, 9.648564, 6.822000, 0.370360, 4.103983, 8.835959, 5.350417}, {6.909482, 7.122869, 4.538856, 0.413352, 0.563682, 8.213211, 3.641620, 3.405092, 1.848284, 4.093572, 8.746218, 8.198015, 4.431138, 8.115096, 3.752868, 9.309067}, {4.522346, 4.953636, 6.954018, 4.096635, 1.076255, 2.290696, 4.178736, 1.015898, 5.956050, 5.301290, 3.462898, 9.802859, 9.976361, 8.454410, 2.433835, 3.138024}, {6.622229, 8.626863, 4.287552, 5.543465, 5.243287, 7.461806, 2.883427, 3.698015, 4.793037, 1.159368, 1.629081, 2.267589, 0.671444, 9.046292, 4.284649, 2.955473}, {4.077998, 8.902470, 5.945147, 3.556053, 8.246637, 4.732425, 0.047543, 5.104174, 6.272343, 6.639598, 9.528616, 1.437121, 6.459073, 0.140771, 9.660500, 8.103308}, {7.141063, 7.821795, 4.805562, 5.816616, 8.541925, 0.016668, 2.015325, 4.703988, 5.374593, 0.995246, 5.829943, 5.670019, 8.307987, 6.370590, 9.468715, 1.161778}, {7.457226, 0.099300, 7.410219, 0.187684, 1.784756, 1.066501, 8.859654, 6.758221, 9.879946, 3.690862, 4.245235, 3.524249, 2.964446, 4.373680, 2.311288, 2.500651}, {4.752189, 0.592439, 2.946092, 0.001511, 6.350062, 6.068312, 2.986027, 0.368879, 3.349494, 5.183024, 7.386629, 0.150104, 9.933439, 1.343407, 0.192133, 6.214067}
+};
+
+
+Double I[IN_ROWS][IN_ROWS] = {
+	{1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},{0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0},{0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0},{0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0},{0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0},{0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0},{0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0},{0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0},{0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0},{0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0},{0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0},{0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0},{0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0},{0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0},{0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0},{0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1}
+};
+
+void matrix_clear(Double* matrix, int m, int n)
+{
+	//zero all elements of a
+	for(int i = 0; i < m; i++){
+	    for(int j = 0; j < n; j++){
+	        *((matrix+i*n)+j) = 0;
+	    }
+	}
+    return;
+}
+
+void matrix_transfer2(Double* x, Double* y, unsigned int m, unsigned int n)
+{
+	//double y[x->m][x->n]; 
+	for (int i = 0; i < m; i++)
+		for (int j = 0; j < n; j++)
+			*((y+i*n)+j) = *((x+i*n)+j);
+			//y[i][j] = x->v[i][j];
+	return;
+}
+
+void matrix_show2(Double* y, unsigned int m, unsigned int n)
+{
+	for(int i = 0; i < m; i++) {
+		for (int j = 0; j < n; j++) {
+			printf(" %8.5f", *((y+i*n)+j));
+		}
+		printf("\n");
+	}
+	printf("\n");
+}
+
+void vector_show(Double *v, int vsize)
+{
+	for (int j = 0; j < vsize; j++) {
+		printf(" %8.3f", v[j]);
+	}
+	printf("\n");
+}
+
+// ||x|| 
+Double vnorm(Double x[], int n)
+{
+	Double sum = 0;
+	for (int i = 0; i < n; i++) sum += x[i] * x[i];
+	return sqrt(sum);
+}
+
+// c = a + b * s 
+void vmadd(Double a[], Double b[], Double s, Double c[], int n)
+{
+	for (int i = 0; i < n; i++)
+		c[i] = a[i] + s * b[i];
+	return;
+}
+
+// y = x / d 
+void vdiv(Double x[], Double d, Double y[], int n)
+{
+	for (int i = 0; i < n; i++) 
+	    y[i] = x[i] / d;
+	return;
+}
+
+void _minor(Double x[][IN_COLS], Double y[][IN_COLS], int d)
+{
+	//Double m[IN_ROWS][IN_COLS];
+	matrix_clear((Double*)y, IN_ROWS, IN_COLS);
+	for(int i=0; i<d; i++)
+		y[i][i] = 1;
+	for(int i=d; i< IN_ROWS; i++)
+	for(int j=d; j< IN_COLS; j++)
+		y[i][j] = x[i][j];
+	return;
+}
+
+/* take c-th column of m, put in v */
+void getColumn(Double *x, Double *v, unsigned int col_nb)
+{
+	for (unsigned int i = 0; i < IN_ROWS; i++)
+		v[i] = *((x+i*IN_COLS)+col_nb);
+	return;
+}
+
+void getHouseholderMatrix(Double v[], Double h[][IN_ROWS])
+{
+    matrix_clear((Double*)h, IN_ROWS, IN_ROWS);
+	for (int i = 0; i < IN_ROWS; i++)
+		for (int j = 0; j < IN_ROWS; j++)
+			h[i][j] = -2 * v[i] * v[j];
+	for (int i = 0; i < IN_ROWS; i++)
+		h[i][i] += 1;
+ 
+	return;
+}
+
+void matrix_mul(Double* x, Double* y, Double* z, unsigned int xm, unsigned int xn, unsigned int ym, unsigned int yn)
+{
+	if (xn != ym) return;
+	
+    matrix_clear((Double*)z, xm, yn);	
+	for (int i = 0; i < xm; i++)
+		for (int j = 0; j < yn; j++)
+			for (int k = 0; k < xn; k++)
+				*((z+i*yn)+j) += *((x+i*xn)+k) * *((y+k*yn)+j);
+	return;
+}
+
+void matrix_transpose(Double* matrix, unsigned int m, unsigned int n)
+{
+	for (int i = 0; i < m; i++) {
+		for (int j = 0; j < i; j++) {
+			Double t = *((matrix+i*n)+j);
+			*((matrix+i*n)+j) = *((matrix+j*n)+i);
+			*((matrix+j*n)+i) = t;
+		}
+	}
+}
+
+//Main
+int main(int argc, char *argv[])
+{
+fprintf(stderr, "Starting Epiphany Host Code....\n");
+
+fprintf(stderr, "BP1\n");
+	char *filename = "bin/testcode.srec";
+	e_epiphany_t dev;
+	e_mem_t      emem;
+fprintf(stderr, "BP2\n");
+	e_set_host_verbosity(H_D0);
+	e_set_loader_verbosity(L_D0);
+fprintf(stderr, "BP3\n");
+	/* init board, reset epiphany, open workgroup */
+	if(e_init(NULL) != E_OK)
+		FAIL("Can't init!\n");
+fprintf(stderr, "BP4\n");
+	e_reset_system();
+	if(e_open(&dev, 0, 0, 4, 4) != E_OK)
+		FAIL("Can't open!\n");
+fprintf(stderr, "BP5\n");
+	if(e_alloc(&emem, SHM_OFFSET, sizeof(shm_t)) != E_OK)
+		FAIL("Can't alloc!\n");
+
+	shm_t shm;
+printf("Size of shm:%llu\n", (unsigned long long) (sizeof shm));
+
+	shm.flag = 0;
+	shm.test = 11;
+	shm.stage = 0;
+	
+	for(unsigned int t=0; t< NB_STAGES; t++){
+	shm.stage_cycles[t] = 0;
+	}
+/*//Do not initiate any matrices in the host program	
+	matrix_transfer2((Double*)I, (Double*)shm.Q, IN_ROWS, IN_ROWS);
+	matrix_show2((Double*)shm.Q, IN_ROWS, IN_ROWS);
+	matrix_transfer2((Double*)I, (Double*)shm.R, IN_ROWS, IN_COLS);
+	matrix_show2((Double*)shm.R, IN_ROWS, IN_COLS);
+	matrix_transfer2((Double*)in, (Double*)shm.A, IN_ROWS, IN_COLS);
+	matrix_show2((Double*)shm.A, IN_ROWS, IN_COLS);
+*///
+	if(e_write(&emem, 0, 0, (off_t)0, &shm, sizeof(shm_t)) == E_ERR)
+			FAIL("Can't clear shm!\n");
+fprintf(stderr, "BP-for_write\n");
+	
+		for(int pindx = 0; pindx<COREUSED; pindx++){
+			int i = pindx/4;
+			int j = pindx%4;
+		/* load program */
+		if(e_load(filename, &dev, i, j, E_TRUE) != E_OK)
+			FAIL("Can't load!\n");
+fprintf(stderr, "BP-for_load:core(%d,%d)\n", i, j);
+		}
+fprintf(stderr, "BP-stage:== %f\n",shm.stage);
+fprintf(stderr, "BP-flag:== %f\n",shm.flag);
+	while(1)
+	{
+		/* poll shm states for changes */
+//		fprintf(stderr, "Polling shared memory.\n");
+
+		/* read shm */
+		if(e_read(&emem, 0, 0, (off_t)0, &shm, sizeof(shm_t)) == E_ERR)
+				FAIL("Can't poll!\n");
+//fprintf(stderr, "BP-for_read\n");
+		//shm.flag = 1;//TEST
+
+//fprintf(stderr, "BP-for_read, shm.test: %f\n", shm.test);
+fprintf(stderr, "BP-stage: %f\n",shm.stage);
+fprintf(stderr, "BP-flag: %f\n",shm.flag);
+		if (shm.flag == COREUSED)
+		{
+			for(int pnb = 0; pnb < COREUSED; pnb++)
+			{
+				
+				printf("\nCore number:%d; Total cycles:%llu\n", pnb, shm.total_cycles[pnb]);
+			}
+			break;
+		}
+	}
+fprintf(stderr, "BP-WHILE1-END\n");
+
+	for(int k=0; k<IN_ROWS; k++){
+	printf("Householder Matrices H[%d]: \n", k); matrix_show2((Double*)shm.H[k]+1, IN_ROWS, IN_ROWS);
+	}
+//	puts("Product of Householder Matrices i.e. QT: \n"); matrix_show2((Double*)shm.H[0], IN_ROWS, IN_ROWS);
+	puts("Q=\n"); matrix_show2((Double*)shm.Q+1, IN_ROWS, IN_ROWS);
+	puts("R=\n"); matrix_show2((Double*)shm.R+1, IN_ROWS, IN_COLS);
+	puts("A=\n"); matrix_show2((Double*)shm.A+1, IN_ROWS, IN_COLS);
+	
+	for(unsigned int t=0; t< NB_STAGES; t++){
+	printf("stage-%u cycles: %llu\n", t, shm.stage_cycles[t]);
+	}
+	printf("shm.flag:%f\n", shm.flag);
+	printf("shm.stage:%f\n", shm.stage);
+	printf("shm.test:%f\n", shm.test);
+	printf("Size of shm:%llu\n", (unsigned long long) (sizeof shm));
+	
+	/* free shm buffer, close workgroup and finalize */
+	if(e_free(&emem) != E_OK) FAIL("Can't free!\n");
+	if(e_close(&dev) != E_OK) FAIL("Can't close!\n");
+	if(e_finalize() != E_OK)  FAIL("Can't finalize!\n");
+
+	printf("Program finished.\n");
+	return(0);
+}

@@ -14,8 +14,8 @@ The course is intended to develop the student’s knowledge and understanding of
 
 ## Course Literature
 * The main textbook to be used for the lecture part of the course is:
-** HP AQA: Hennessy, J.L. and Patterson, D.A. Computer Architecture: A Quantitative Approach, The Morgan Kaufmann Series in Computer Architecture and Design, Sixth Edition, 2017.
+- HP AQA: Hennessy, J.L. and Patterson, D.A. Computer Architecture: A Quantitative Approach, The Morgan Kaufmann Series in Computer Architecture and Design, Sixth Edition, 2017.
 
 * Other suitable books, recommended for reading, are:
-** Kirk, David and Hwu, Wen-mei. Programming Massively Parallel Processors: A Hands-on Approach, Morgan Kaufmann (Elsevier), Third Edition, 2016.
-** El-Rewini, H. & Abd-el-Barr, M. Advanced Computer Architecture and Parallel Processing, John Wiley & Sons, 2005. The book was used earlier in this course and is electronically available in fulltext form through the database ebrary, available through the University’s library.
+- Kirk, David and Hwu, Wen-mei. Programming Massively Parallel Processors: A Hands-on Approach, Morgan Kaufmann (Elsevier), Third Edition, 2016.
+- El-Rewini, H. & Abd-el-Barr, M. Advanced Computer Architecture and Parallel Processing, John Wiley & Sons, 2005. The book was used earlier in this course and is electronically available in fulltext form through the database ebrary, available through the University’s library.
